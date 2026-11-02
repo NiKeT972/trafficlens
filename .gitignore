@@ -1,0 +1,39 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Large artefacts: weights live on the Hugging Face Hub, data is downloaded by script
+*.pt
+*.onnx
+*.engine
+*.torchscript
+data/raw/
+data/processed/
+datasets/
+runs/
+outputs/
+*.mp4
+*.avi
+*.mov
+!assets/samples/.gitkeep
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
