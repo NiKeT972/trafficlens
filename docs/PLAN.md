@@ -1,6 +1,6 @@
 # TrafficLens — Phase 0 Plan
 
-_Status: draft for review (Phase 0). Last updated 2026-11-02._
+_Status: Phase 1 code ready, waiting for the first Kaggle run. Last updated 2026-11-02._
 
 ## 1. Toolchain (checked against PyPI on 2026-11-02)
 
@@ -167,7 +167,7 @@ flowchart LR
 ## 7. Phase checklist
 
 - [x] **Phase 0** — plan (this doc), licence, gitignore, `.env.example`
-- [ ] **Phase 1** — data prep: download/convert/remap/split, class-distribution plots, `data.yaml`, remap tests
+- [~] **Phase 1** — data prep. Code and tests done; the real class distribution comes from running `notebooks/01_data_prep.ipynb` on Kaggle
 - [ ] **Phase 2** — `notebooks/train.ipynb` (Kaggle) + `eval/baseline.py` → you run training, return `best.pt` + metrics
 - [ ] **Phase 3** — detect + ByteTrack + line counting module + CLI + tests
 - [ ] **Phase 4** — analytics, heatmap, CSV, optional speed
@@ -179,3 +179,14 @@ flowchart LR
 1. **Dataset:** OK to register for IDD and go with option A? If yes, after registering, please paste the licence text shown at download, or tell me its name.
 2. **Where Phase 1 runs:** my sandbox can't reach Roboflow, Kaggle, HF or IDD, so I can't download data here. My plan is to write the data-prep scripts and tests here (tested on a tiny synthetic fixture) and run them as the first cells of the Kaggle notebook, so the data never has to leave Kaggle. Phase 1's distribution plots would then come from your first Kaggle run. The alternative is to allow those domains in this environment's network settings so I can run Phase 1 myself.
 3. **IDD on Kaggle:** either upload the official IDD-D archive as a *private* Kaggle dataset (about 20 GB, one-time), or use the YOLO mirror if the official licence permits it.
+
+## 9. Decisions made after Phase 0
+
+- **Dataset:** IDD-Detection, through the Kaggle YOLO-format copy
+  [`redzapdos123/indian-driving-dataset-detections-yolov11`](https://www.kaggle.com/datasets/redzapdos123/indian-driving-dataset-detections-yolov11)
+  (CC BY-NC-SA 4.0, 41,962 images, 15 classes, about 22 GB). It is attached as a Kaggle notebook input, so nothing is downloaded locally.
+  Because it is already in YOLO format, the XML→YOLO conversion step (`convert.py`) is not needed.
+- **Splits:** use the copy's own train/val/test (about 80/10/10). The first Kaggle run prints sample filenames per split. If they show drive-sequence IDs, I'll check whether near-identical frames leak across splits and re-split by sequence if they do.
+- **No copying:** prepared images are symlinks to the read-only input, so only the remapped label files (a few MB) are written to `/kaggle/working`.
+- **Train subset:** at most 18,000 images. Every image with an `auto_rickshaw` or `bicycle` is kept, and background images (no kept labels) are capped at 5 %. Val and test are kept whole.
+- **Weights licence:** the fine-tuned weights inherit CC BY-NC-SA 4.0 (non-commercial, share-alike, attribute IDD / IIIT Hyderabad). The code stays AGPL-3.0.
