@@ -1,0 +1,45 @@
+# Final TrafficLens class list and how source datasets map onto it.
+# Order matters: index in `classes` = YOLO class id.
+classes:
+  - car
+  - bus
+  - truck
+  - auto_rickshaw
+  - two_wheeler
+  - bicycle
+  - pedestrian
+
+# Per-source mapping, by class NAME (ids are read from the source's own data.yaml).
+# Every source class must appear either in `map` or in `drop`; anything else raises an
+# error, so a dataset with unexpected class names fails loudly instead of silently.
+# Names are compared case-insensitively, with "_" and "-" treated as spaces.
+sources:
+  idd:
+    map:
+      car: car
+      caravan: car
+      bus: bus
+      truck: truck
+      trailer: truck
+      autorickshaw: auto_rickshaw
+      motorcycle: two_wheeler
+      bicycle: bicycle
+      person: pedestrian
+    drop:
+      - rider            # person on a two-wheeler/bicycle: counting it would double-count the vehicle
+      - vehicle fallback # ambiguous "other vehicle"
+      - animal
+      - train
+      - traffic light
+      - traffic sign
+
+  # COCO-pretrained baseline (Phase 2). COCO has no auto-rickshaw class.
+  coco:
+    map:
+      car: car
+      bus: bus
+      truck: truck
+      motorcycle: two_wheeler
+      bicycle: bicycle
+      person: pedestrian
+    drop_unlisted: true  # COCO has 80 classes; everything not mapped is ignored
