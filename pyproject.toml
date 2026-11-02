@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trafficlens"
+version = "0.1.0"
+description = "Indian traffic analytics: detect, track and count vehicles with a fine-tuned YOLO model."
+readme = "README.md"
+license = { text = "AGPL-3.0-only" }
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "matplotlib>=3.8",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# Detection, tracking and app dependencies are added in later phases.
+ml = ["ultralytics>=8.4", "supervision>=0.31", "opencv-python-headless>=4.9"]
+app = ["gradio>=6.0", "plotly>=5.20", "huggingface_hub>=0.25"]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
