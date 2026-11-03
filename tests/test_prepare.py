@@ -74,3 +74,11 @@ def test_select_subset_no_cap_limits_background_fraction():
     recs = [_rec(f"c{i}", [0]) for i in range(19)] + [_rec(f"bg{i}", []) for i in range(10)]
     sel = select_subset(recs, max_images=None, keep_all_ids=set(), max_background_frac=0.05, seed=0)
     assert sum(r.is_background for r in sel) == 1  # 1 / 20 = 5%
+
+
+def test_find_source_root_kaggle_nested_layout(tmp_path):
+    # New Kaggle layout: /kaggle/input/datasets/<owner>/<slug>/<folder>/data.yaml
+    root = tmp_path / "input" / "datasets" / "redzapdos123" / "indian-driving-dataset-detections-yolov11" / "IDDDetectionsYOLODataset"
+    (root / "train" / "images").mkdir(parents=True)
+    (root / "data.yaml").write_text("names: [car]\n")
+    assert find_source_root(tmp_path / "input") == root

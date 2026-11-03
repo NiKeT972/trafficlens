@@ -63,10 +63,12 @@ class ImageRecord:
         return not self.lines
 
 
-def find_source_root(search_dir: str | Path, max_depth: int = 3) -> Path:
+def find_source_root(search_dir: str | Path, max_depth: int = 6) -> Path:
     """Find the folder holding the source ``data.yaml`` under ``search_dir``.
 
-    Only searches ``max_depth`` levels deep (the image folders are huge, so a full
+    Kaggle mounts datasets at ``/kaggle/input/datasets/<owner>/<slug>/...``, so the
+    default depth is generous. ``images``/``labels`` folders are never entered (they are
+    huge), so this stays fast. Only searches ``max_depth`` levels deep (a full
     recursive glob would be slow).
 
     Raises:
