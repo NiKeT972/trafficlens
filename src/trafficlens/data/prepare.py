@@ -25,9 +25,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import random
 import shutil
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -104,25 +106,35 @@ def read_source_names(root: Path) -> list[str] | dict[int, str]:
     return raw["names"]
 
 
-def scan_split(images_dir: Path, labels_dir: Path, remap: ClassRemap) -> list[ImageRecord]:
+def _read_record(img: Path, labels_dir: Path, existing_labels: set[str], remap: ClassRemap) -> ImageRecord:
+    """Build the :class:`ImageRecord` for one image (reads its label file if present)."""
+    name = f"{img.stem}.txt"
+    if name in existing_labels:
+        text = (labels_dir / name).read_text(encoding="utf-8")
+        lines = remap_label_lines(text.splitlines(), remap.id_map)
+        had = True
+    else:
+        lines, had = [], False
+    counts: Counter[int] = Counter(int(line.split(maxsplit=1)[0]) for line in lines)
+    return ImageRecord(image=img, lines=lines, class_counts=counts, had_label_file=had)
+
+
+def scan_split(images_dir: Path, labels_dir: Path, remap: ClassRemap, workers: int = 32) -> list[ImageRecord]:
     """Read every image in ``images_dir`` and remap its label file.
 
     Images without a label file are treated as background (YOLO convention).
+    Label files are read with a thread pool: Kaggle's dataset mount fetches files over
+    the network with high per-file latency, so sequential reads manage only a few files
+    per second while parallel reads are many times faster.
     """
     if not images_dir.is_dir():
         raise FileNotFoundError(f"Images folder not found: {images_dir}")
     images = sorted(p for p in images_dir.iterdir() if p.suffix.lower() in IMAGE_EXTS)
-    records: list[ImageRecord] = []
-    for img in tqdm(images, desc=f"scan {images_dir.parent.name}", unit="img", mininterval=2):
-        label = labels_dir / f"{img.stem}.txt"
-        if label.is_file():
-            lines = remap_label_lines(label.read_text(encoding="utf-8").splitlines(), remap.id_map)
-            had = True
-        else:
-            lines, had = [], False
-        counts: Counter[int] = Counter(int(line.split(maxsplit=1)[0]) for line in lines)
-        records.append(ImageRecord(image=img, lines=lines, class_counts=counts, had_label_file=had))
-    return records
+    # One directory listing instead of one existence check per image.
+    existing = {p.name for p in labels_dir.iterdir()} if labels_dir.is_dir() else set()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        it = pool.map(lambda img: _read_record(img, labels_dir, existing, remap), images, chunksize=64)
+        return list(tqdm(it, total=len(images), desc=f"scan {images_dir.parent.name}", unit="img", mininterval=2))
 
 
 def select_subset(
@@ -181,7 +193,7 @@ def write_split(records: list[ImageRecord], out_split_dir: Path, link_mode: str 
     for r in tqdm(records, desc=f"write {out_split_dir.name}", unit="img", mininterval=2):
         dst = img_dir / r.image.name
         if link_mode == "symlink":
-            dst.symlink_to(r.image.resolve())
+            dst.symlink_to(os.path.abspath(r.image))  # abspath: no per-file stat on the network mount
         else:
             shutil.copy2(r.image, dst)
         (lbl_dir / f"{r.image.stem}.txt").write_text("\n".join(r.lines) + ("\n" if r.lines else ""), encoding="utf-8")
